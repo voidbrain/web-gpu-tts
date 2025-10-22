@@ -19,7 +19,7 @@ export class CommandService {
     {
       command: 'charge_battery',
       examples: ['Carica batteria {batteryId}', 'Inizia a caricare batteria {batteryId}', 'Charge battery {batteryId}'],
-      params: ['batteryId'],
+      params: ['batteryId', 'series'],
     },
     {
       command: 'discharge_battery',
