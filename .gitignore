@@ -42,6 +42,4 @@ testem.log
 Thumbs.db
 
 # Heavy files
-/assets/models/*
-src/assets/models/whisper-small/onnx/decoder_model.onnx
-src/assets/models/whisper-small/onnx/encoder_model.onnx
+src/assets/models/*
