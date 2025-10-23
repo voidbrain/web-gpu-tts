@@ -3,18 +3,29 @@ import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { TranscriberSettingsModalComponent } from '@routes/components/transcriber-settings-modal/transcriber-settings-modal.component';
 import { LanguageComponent } from '@shared/components/language/language.component';
 import { AudioRecorderComponent } from '@routes/components/audio-recorder/audio-recorder.component';
 import { AudioPlayerComponent } from '@routes/components/audio-player/audio-player.component';
 import { TranscriberComponent } from '@routes/components/transcriber/transcriber.component';
 import { LoggerService } from '@service/logger.service';
+import { CommandService, CommandMatch } from '@service/command-parser/command-parser.service';
 
 @Component({
   selector: 'app-audio-manager',
   templateUrl: './audio-manager.component.html',
   standalone: true,
-  imports: [CommonModule, ModalModule, LanguageComponent, AudioRecorderComponent, AudioPlayerComponent, TranscriberComponent, TranslatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ModalModule,
+    LanguageComponent,
+    AudioRecorderComponent,
+    AudioPlayerComponent,
+    TranscriberComponent,
+    TranslatePipe,
+  ],
   providers: [BsModalService],
 })
 export class AudioManagerComponent {
@@ -25,19 +36,39 @@ export class AudioManagerComponent {
   audioBlob?: Blob;
   progress = 0;
 
+  inputText = 'Charge battery 12';
+  result: string | null = null;
+
   constructor(
     private modalService: BsModalService,
-    protected deviceDetectorService: DeviceDetectorService
-  ) {}
+    protected deviceDetectorService: DeviceDetectorService,
+    private commandService: CommandService
+  ) {
+    this.init();
+  }
+
+  async init() {
+    await this.commandService.init();
+  }
+
+  async handleText(text: string) {
+    const result: CommandMatch = await this.commandService.parseCommand(text);
+    console.log(text, 'Parsed command:', result);
+    await this.commandService.executeCommand(result);
+  }
 
   onRecordingStarted(): void {
-    LoggerService.logInfo('hello');
+    LoggerService.logInfo('Recording started');
     this.reset();
   }
 
   onRecordingComplete(data: { audioBuffer: Blob; audioUrl: string }): void {
     this.audioUrl = data.audioUrl;
     this.audioBlob = data.audioBuffer;
+
+    // For example, run command after transcription (replace with real transcription)
+    const transcribedText = 'Charge battery 12';
+    this.handleText(transcribedText);
   }
 
   clearCurrentRecording(): void {

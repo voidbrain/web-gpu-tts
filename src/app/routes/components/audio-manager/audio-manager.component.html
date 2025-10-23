@@ -45,4 +45,10 @@
   } @else {
     <div>{{ 'ERR_WEBGPU_IS_NOT_SUPPORTED' | translate }}</div>
   }
+
+  <div class="ion-padding">
+    <input [(ngModel)]="inputText" placeholder="Type a command" />
+    <button (click)="handleText(inputText)">Run</button>
+    <pre>{{ result }}</pre>
+  </div>
 </div>

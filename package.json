@@ -23,7 +23,7 @@
     "@angular/platform-browser-dynamic": "^18.2.0",
     "@angular/router": "^18.2.0",
     "@angular/service-worker": "^18.2.0",
-    "@huggingface/transformers": "^3.0.2",
+    "@huggingface/transformers": "^3.7.6",
     "@ngx-translate/core": "^16.0.3",
     "@ngx-translate/http-loader": "^16.0.0",
     "@popperjs/core": "^2.11.8",
