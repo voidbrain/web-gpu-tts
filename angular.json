@@ -24,13 +24,17 @@
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "src/favicon.ico",
               "src/.htaccess",
               "src/assets",
               {
                 "glob": "**/*",
                 "input": "src/assets/models",
                 "output": "assets/models"
+              },
+              {
+                "glob": "**/*",
+                "input": "public",
+                "output": "/"
               }
             ],
             "styles": [
