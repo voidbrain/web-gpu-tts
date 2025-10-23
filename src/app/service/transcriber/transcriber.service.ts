@@ -1,3 +1,4 @@
+// transcriber.service.ts
 import { Injectable, signal, WritableSignal } from '@angular/core';
 import { TranscriberConfigStorage } from '@storage/transcriber-config.storage';
 import { PipelineFactory } from '@model/pipeline-factory';

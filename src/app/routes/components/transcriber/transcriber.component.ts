@@ -1,3 +1,4 @@
+// transcriber.component.ts
 import { Component, effect, input, OnInit, output, Output, EventEmitter } from '@angular/core';
 import { NotificationService } from '@service/notification.service';
 import { TranscriberService } from '@service/transcriber/transcriber.service';
@@ -26,6 +27,18 @@ export class TranscriberComponent implements OnInit {
   ) {
     effect(() => {
       this.isTranscriptionInProgress.emit(this.transcriberService.isBusy);
+    });
+
+    effect(() => {
+      const result = this.transcriberService.transcript;
+      if (result && result.chunks && !this.transcriberService.isBusy) {
+        // Concatenate all chunk texts
+        const finalText = result.chunks
+          .map(c => c.text)
+          .join(' ')
+          .trim();
+        this.transcriptionComplete.emit(finalText);
+      }
     });
   }
 
