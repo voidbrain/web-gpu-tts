@@ -1,4 +1,4 @@
-import { Component, effect, input, model, OnInit, output } from '@angular/core';
+import { Component, effect, input, OnInit, output, Output, EventEmitter } from '@angular/core';
 import { NotificationService } from '@service/notification.service';
 import { TranscriberService } from '@service/transcriber/transcriber.service';
 import { TranscriberConfigStorage } from '@storage/transcriber-config.storage';
@@ -13,6 +13,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   providers: [TranscriberService],
 })
 export class TranscriberComponent implements OnInit {
+  @Output() transcriptionComplete = new EventEmitter<string>();
   protected audioProgress: number | undefined = 0;
   audioBlob = input.required<Blob>();
   isTranscriptionInProgress = output<boolean>();

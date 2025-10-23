@@ -53,6 +53,18 @@ export class AudioManagerComponent {
     this.init();
   }
 
+  async onTranscriptionComplete(transcribedText: string) {
+    this.inputText = transcribedText; // optional: show in input
+    console.log('Transcribed text:', transcribedText);
+
+    // Pass to EmbedderService / command parser
+    this.command = await this.embedderService.parseCommand(transcribedText);
+    console.log('Parsed command:', this.command);
+
+    // Optionally, execute command
+    // await this.embedderService.executeCommand(this.command);
+  }
+
   async init() {
     // await this.commandService.init();
     // const transcribedText = 'Sample transcribed text'; // Replace with actual transcribed text
@@ -74,6 +86,7 @@ export class AudioManagerComponent {
   onRecordingComplete(data: { audioBuffer: Blob; audioUrl: string }): void {
     this.audioUrl = data.audioUrl;
     this.audioBlob = data.audioBuffer;
+    this.transcribe();
   }
 
   clearCurrentRecording(): void {

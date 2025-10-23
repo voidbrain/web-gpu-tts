@@ -13,9 +13,6 @@
             <i class="bi bi-gear"></i>
           </button>
           <h3 class="m-2">{{ 'AUDIO_MANAGER' | translate }}</h3>
-          <div class="ms-auto">
-            <app-language></app-language>
-          </div>
         </div>
         @if (!isTranscriptionInProgress) {
           <div class="mb-2">
@@ -38,7 +35,11 @@
       </div>
       @if (isTranscribeEnabled && audioBlob) {
         <div class="p-2">
-          <app-transcriber [audioBlob]="audioBlob" (isTranscriptionInProgress)="setTranscriptionInProgress($event)"></app-transcriber>
+          audioblob
+          <app-transcriber
+            [audioBlob]="audioBlob"
+            (isTranscriptionInProgress)="setTranscriptionInProgress($event)"
+            (transcriptionComplete)="onTranscriptionComplete($event)"></app-transcriber>
         </div>
       }
     </div>

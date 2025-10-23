@@ -34,7 +34,7 @@
                       aria-valuemin="0"
                       aria-valuemax="100"
                       [attr.aria-valuenow]="item.progress | number"
-                      style="width: {{ item.progress | number }}%"></div>
+                      [style.width.%]="item.progress | number"></div>
                   </div>
                 </div>
               </div>
@@ -52,7 +52,7 @@
           aria-valuemin="0"
           aria-valuemax="100"
           [attr.aria-valuenow]="audioProgress"
-          style="width: {{ audioProgress }}%"></div>
+          [style.width.%]="audioProgress"></div>
       </div>
     }
     @if (transcriberService.transcript) {
