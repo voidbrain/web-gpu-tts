@@ -25,11 +25,26 @@ export class EmbedderService {
   private embedder: any | null = null;
   private loadingPromise: Promise<void> | null = null;
 
-  // --- Realistic example embeddings (placeholders replaced with sample values) ---
+  // --- Command definitions ---
   private commands: Command[] = [
     {
       command: 'charge_battery',
-      examples: ['Carica batteria 1', 'Carica batteria 1 serie gialla', 'Charge battery 1', 'Charge battery 1, yellow series'],
+      examples: [
+        'Carica batteria 1',
+        'Carica la batteria 1',
+        'Carica la batteria numero 1',
+        'Carica batteria 1 serie gialla',
+        'Carica batteria 1 rossa',
+        'Carica la batteria 1 blu',
+        'Carica la batteria blu numero 1',
+        'Charge battery 1',
+        'Charge the battery 1',
+        'Charge battery number 1',
+        'Charge battery 1, yellow series',
+        'Charge battery red 1',
+        'Charge blue battery 1',
+        'Charge blue battery number 1',
+      ],
       params: ['batteryId', 'series'],
     },
     {
@@ -66,7 +81,6 @@ export class EmbedderService {
         });
         console.log('[EmbedderService] Embedder ready ✅');
 
-        // Precompute command embeddings
         for (const cmd of this.commands) {
           for (const ex of cmd.examples) {
             const emb = await this.embed(ex);
@@ -104,14 +118,7 @@ export class EmbedderService {
         return [];
       }
 
-      const normalized = this.normalizeVector(flat);
-
-      // Debug info
-      const mean = normalized.reduce((s, v) => s + v, 0) / normalized.length;
-      const variance = normalized.reduce((s, v) => s + (v - mean) ** 2, 0) / normalized.length;
-      console.log(`[EmbedderService] Embedded "${text}" → len=${normalized.length}, var=${variance.toFixed(6)}`);
-
-      return normalized;
+      return this.normalizeVector(flat);
     } catch (err) {
       console.error('[EmbedderService] Error embedding text:', text, err);
       return [];
@@ -131,21 +138,19 @@ export class EmbedderService {
       }
       // Typed array (Float32Array, Int32Array, etc.)
       else if (ArrayBuffer.isView(obj)) {
-        const arr = obj as unknown as number[]; // cast typed array to number[]
-        for (let i = 0; i < arr.length; i++) flatten(arr[i]);
+        const arr = obj as Float32Array | Int32Array | Uint8Array | number[];
+        for (const val of arr) {
+          if (typeof val === 'number' && isFinite(val)) flat.push(val);
+          else flatten(val);
+        }
       }
       // ORT tensor with cpuData
       else if (typeof obj === 'object') {
         if ('cpuData' in obj && obj.cpuData) {
           const arr = obj.cpuData as Float32Array | number[];
-          const seqLen = obj.dims?.[0] ?? 1;
-          const hiddenSize = obj.dims?.[1] ?? arr.length;
-          for (let col = 0; col < hiddenSize; col++) {
-            let sum = 0;
-            for (let row = 0; row < seqLen; row++) {
-              sum += arr[row * hiddenSize + col];
-            }
-            flat.push(sum / seqLen);
+          // for (let i = 0; i < arr.length; i++) {
+          for (const val of arr) {
+            flat.push(val);
           }
         } else {
           Object.values(obj).forEach(flatten);
@@ -182,16 +187,14 @@ export class EmbedderService {
     return denominator === 0 ? 0 : dot / denominator;
   }
 
-  /** --- Parse command text and extract optional params --- */
+  /** --- Parse command text with robust series extraction --- */
   async parseCommand(text: string): Promise<CommandMatch> {
     if (!this.commandEmbeddings.length) await this.init();
-
     const inputEmb = await this.embed(text);
     if (!inputEmb.length) return { command: null, params: {} };
 
     let bestScore = -1;
     let bestCommand: string | null = null;
-
     for (const cmd of this.commandEmbeddings) {
       const score = this.cosineSim(inputEmb, cmd.embedding);
       if (score > bestScore) {
@@ -199,21 +202,31 @@ export class EmbedderService {
         bestCommand = cmd.command;
       }
     }
-
     console.log('[EmbedderService] Best match:', bestCommand, 'score:', bestScore.toFixed(3));
 
-    // --- Extract parameters ---
+    // --- Extract batteryId ---
     const ids = text.match(/\b\d+\b/g)?.map(Number) || [];
-    const seriesMatch = text.match(/serie\s+(\w+)|(\w+)\s+series/i);
-    const series = seriesMatch ? seriesMatch[1] || seriesMatch[2] : undefined;
+    const batteryId = ids.length === 1 ? ids[0] : ids;
 
-    return {
-      command: bestCommand,
-      params: {
-        batteryId: ids.length === 1 ? ids[0] : ids,
-        series,
-      },
-    };
+    // --- Extract series/color robustly ---
+    const seriesList = ['rossa', 'blu', 'gialla', 'yellow', 'red', 'green', 'blue'];
+    let series: string | undefined;
+
+    const words = text.toLowerCase().split(/\s+/);
+    for (const w of words) {
+      if (seriesList.includes(w)) {
+        series = w;
+        break;
+      }
+    }
+
+    // Fallback: word immediately after battery number
+    if (!series && batteryId) {
+      const match = text.match(new RegExp(`\\b${batteryId}\\b\\s+(\\w+)`, 'i'));
+      if (match) series = match[1].toLowerCase();
+    }
+
+    return { command: bestCommand, params: { batteryId, series } };
   }
 
   /** --- Execute command --- */
@@ -223,20 +236,19 @@ export class EmbedderService {
       return;
     }
 
-    const id = result.params['batteryId'];
-    const series = result.params['series'];
+    const { batteryId, series } = result.params;
     switch (result.command) {
       case 'charge_battery':
-        console.log(`⚡ Charging battery ${id}` + (series ? ` (${series} series)` : ''));
+        console.log(`⚡ Charging battery ${batteryId}` + (series ? ` (${series} series)` : ''));
         break;
       case 'discharge_battery':
-        console.log(`🔋 Discharging battery ${id}`);
+        console.log(`🔋 Discharging battery ${batteryId}`);
         break;
       case 'check_resistance':
-        console.log(`🧪 Checking resistance for battery ${id}`);
+        console.log(`🧪 Checking resistance for battery ${batteryId}`);
         break;
       case 'store_battery':
-        console.log(`📦 Storing battery ${id}`);
+        console.log(`📦 Storing battery ${batteryId}`);
         break;
       default:
         console.warn('[EmbedderService] Unknown command:', result.command);
