@@ -7,7 +7,9 @@ import { ModelProgressItem } from '@model/model-progress-item';
 import { TranscriberData } from '@model/transcriber-data';
 import { LoggerService } from '@service/logger.service';
 
-@Injectable()
+@Injectable({
+  providedIn: 'root',
+})
 export class TranscriberService {
   private transcriber: any;
   private streamer: any;
@@ -104,7 +106,19 @@ export class TranscriberService {
   }
 
   public async load(): Promise<void> {
-    await this.initializePipelineFactory(); // ensures PipelineFactory is ready
+    // Reset and show loading state
+    this.isModelLoadingSignal.set(true);
+    this.progressItemsSignal.set([]);
+
+    try {
+      await this.createTranscriber(); // This handles 'initiate', 'progress', 'done', 'ready'
+    } catch (err) {
+      console.error('Model loading failed:', err);
+      this.errorSignal.set((err as any)?.message ?? 'Unknown model loading error');
+    } finally {
+      // Hide loader once done
+      this.isModelLoadingSignal.set(false);
+    }
   }
 
   private async initializePipelineFactory(): Promise<void> {

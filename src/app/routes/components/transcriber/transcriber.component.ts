@@ -11,7 +11,6 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   templateUrl: './transcriber.component.html',
   standalone: true,
   imports: [NgClass, DecimalPipe, TranslatePipe],
-  providers: [TranscriberService],
 })
 export class TranscriberComponent implements OnInit {
   @Output() transcriptionComplete = new EventEmitter<string>();
