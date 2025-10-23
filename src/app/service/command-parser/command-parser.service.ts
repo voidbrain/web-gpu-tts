@@ -1,4 +1,4 @@
-// src/app/services/command-parser.service.ts
+// src/app/services/embedder.service.ts
 import { Injectable } from '@angular/core';
 import { env, pipeline } from '@huggingface/transformers';
 
@@ -8,12 +8,11 @@ interface Command {
   params?: string[];
 }
 
-export interface CommandMatch {
+interface CommandMatch {
   command: string | null;
   params: Record<string, any>;
 }
 
-// Configure Hugging Face
 env.allowLocalModels = true;
 env.localModelPath = 'assets/models';
 env.backends.onnx!.wasm!.wasmPaths = {
@@ -21,28 +20,19 @@ env.backends.onnx!.wasm!.wasmPaths = {
 };
 
 @Injectable({ providedIn: 'root' })
-export class CommandService {
+export class EmbedderService {
+  private embedder: any | null = null;
+  private loadingPromise: Promise<void> | null = null;
+
   private commands: Command[] = [
     {
       command: 'charge_battery',
-      examples: [
-        'Carica batteria {batteryId}',
-        'Carica batteria {batteryId} serie {serieText}',
-        'Inizia a caricare batteria {batteryId}',
-        'Charge battery {batteryId}',
-        'Start charging battery {batteryId}',
-        'Battery {batteryId} charging',
-      ],
-      params: ['batteryId', 'serieText'],
+      examples: ['Carica batteria {batteryId}', 'Inizia a caricare batteria {batteryId}', 'Charge battery {batteryId}'],
+      params: ['batteryId', 'series'],
     },
     {
       command: 'discharge_battery',
-      examples: [
-        'Scarica batteria {batteryId}',
-        'Discharge battery {batteryId}',
-        'Start discharging battery {batteryId}',
-        'Battery {batteryId} discharging',
-      ],
+      examples: ['Scarica batteria {batteryId}', 'Discharge battery {batteryId}'],
       params: ['batteryId'],
     },
     {
@@ -58,126 +48,124 @@ export class CommandService {
   ];
 
   private commandEmbeddings: { command: string; embedding: number[] }[] = [];
-  private embedder: any | null = null;
-  private loadingPromise: Promise<void> | null = null;
 
-  /** Initialize embedder and precompute embeddings */
+  /** Initialize the embedder once */
   async init(): Promise<void> {
     if (this.embedder) return;
     if (this.loadingPromise) return this.loadingPromise;
 
     this.loadingPromise = (async () => {
-      try {
-        console.log('Loading multilingual MiniLM model...');
-        this.embedder = await pipeline('feature-extraction', 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2', {
-          local_files_only: true,
-          dtype: 'fp32',
-          device: 'webgpu', // safer for testing
-        });
-        console.log('Embedder ready ✅');
+      console.log('Loading multilingual MiniLM model...');
+      this.embedder = await pipeline('feature-extraction', 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2', {
+        local_files_only: true,
+        dtype: 'fp32',
+        device: 'webgpu',
+      });
+      console.log('Embedder ready ✅');
 
-        // Precompute embeddings for command examples
-        for (const cmd of this.commands) {
-          for (const ex of cmd.examples) {
-            const emb = await this.getEmbedding(ex);
-            this.commandEmbeddings.push({ command: cmd.command, embedding: this.normalizeVec(emb) });
-          }
+      // Precompute command embeddings
+      for (const cmd of this.commands) {
+        for (const ex of cmd.examples) {
+          const emb = await this.embed(ex);
+          this.commandEmbeddings.push({ command: cmd.command, embedding: emb });
         }
-
-        console.log('Command embeddings precomputed ✅');
-      } catch (err) {
-        console.error('Error initializing embedder:', err);
       }
+      console.log('Command embeddings ready ✅');
     })();
 
     return this.loadingPromise;
   }
 
-  /** Get embedding for a text */
-  private async getEmbedding(text: string): Promise<number[]> {
-    if (!this.embedder) throw new Error('Embedder not initialized');
+  /** Embed text into a flat number[] */
+  async embed(text: string): Promise<number[]> {
+    if (!this.embedder) await this.init();
+    const result = await this.embedder!(text);
 
-    try {
-      const result = await this.embedder(text);
-      const tensor = result[0];
-
-      if (tensor.cpuData) {
-        const array = Object.values(tensor.cpuData) as number[];
-        const seqLen = tensor.dims[0];
-        const hiddenSize = tensor.dims[1];
-
-        // Average over tokens to get sentence embedding
-        return Array.from({ length: hiddenSize }, (_, col) => array.reduce((sum, _, row) => sum + array[row * hiddenSize + col], 0) / seqLen);
-      }
-
-      // fallback if plain array
-      if (Array.isArray(tensor)) return tensor as number[];
-      return Array(tensor.dims?.[1] || 384).fill(0); // fallback to zero vector
-    } catch (err) {
-      console.error('Error computing embedding for text:', text, err);
-      return Array(384).fill(0); // fallback zero vector
-    }
+    // Normalize first tensor/array
+    return this.normalizeTensor(result[0]);
   }
 
-  /** Normalize vector for cosine similarity */
-  private normalizeVec(vec: number[]): number[] {
-    if (!Array.isArray(vec) || vec.length === 0) return [];
-    const mag = Math.sqrt(vec.reduce((sum, v) => sum + v * v, 0));
-    return vec.map(v => v / (mag || 1e-10));
+  /** Convert ORT tensor or nested array to flat number[] */
+  private normalizeTensor(tensor: any): number[] {
+    if (!tensor) return [];
+
+    // ORT tensor with cpuData
+    if (tensor.cpuData) {
+      const array = Object.values(tensor.cpuData) as number[];
+      const seqLen = tensor.dims[0];
+      const hiddenSize = tensor.dims[1];
+
+      return Array.from({ length: hiddenSize }, (_, col) => array.reduce((sum, _, row) => sum + array[row * hiddenSize + col], 0) / seqLen);
+    }
+
+    // ORT tensor with flat data array
+    if (tensor.data && Array.isArray(tensor.data)) {
+      return tensor.data;
+    }
+
+    // Nested array [seq_len, hidden_size]
+    if (Array.isArray(tensor) && Array.isArray(tensor[0])) {
+      const seqLen = tensor.length;
+      const hiddenSize = tensor[0].length;
+
+      return Array.from({ length: hiddenSize }, (_, col) => tensor.reduce((sum, row) => sum + row[col], 0) / seqLen);
+    }
+
+    // Plain flat array
+    if (Array.isArray(tensor)) return tensor;
+
+    // Unknown structure: try flatten recursively
+    if (typeof tensor === 'object') {
+      const flat: number[] = [];
+      const recurse = (obj: any) => {
+        if (Array.isArray(obj)) obj.forEach(recurse);
+        else if (typeof obj === 'number') flat.push(obj);
+        else if (obj && typeof obj === 'object') Object.values(obj).forEach(recurse);
+      };
+      recurse(tensor);
+      if (flat.length) return flat;
+    }
+
+    throw new Error('Cannot normalize embedding result: unknown tensor format');
   }
 
   /** Cosine similarity */
-  private cosineSim(a: number[], b: number[]): number {
-    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || a.length === 0) return -1;
+  cosineSim(a: number[], b: number[]): number {
+    if (!a.length || !b.length) return 0;
     const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
     const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
     const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
-    return dot / (magA * magB || 1e-10);
+    return dot / (magA * magB);
   }
 
-  /** Parse input text to command + params */
-  async parseCommand(text: string, threshold = 0.7): Promise<CommandMatch> {
-    if (!this.embedder) await this.init();
+  /** Parse text into a command + parameters */
+  async parseCommand(text: string): Promise<CommandMatch> {
+    if (!this.commandEmbeddings.length) await this.init();
 
-    const inputVec = this.normalizeVec(await this.getEmbedding(text));
+    const inputEmb = await this.embed(text);
+
     let bestScore = -1;
     let bestCommand: string | null = null;
 
     for (const cmd of this.commandEmbeddings) {
-      const score = this.cosineSim(inputVec, cmd.embedding);
+      const score = this.cosineSim(inputEmb, cmd.embedding);
       if (score > bestScore) {
         bestScore = score;
         bestCommand = cmd.command;
       }
     }
 
-    if (bestScore < threshold) bestCommand = null;
-
-    // Extract batteryId(s)
-    const batteryIds = text.match(/\b\d+\b/g)?.map(Number) || [];
-
-    // Extract optional serieText
-    const serieMatch = text.match(/serie (\w+)/i);
-    const serieText = serieMatch ? serieMatch[1] : undefined;
-
-    console.log('Best command match:', bestCommand, 'with score', bestScore);
-
-    return {
-      command: bestCommand,
-      params: {
-        batteryId: batteryIds.length === 1 ? batteryIds[0] : batteryIds,
-        serieText,
-      },
-    };
+    const ids = text.match(/\b\d+\b/g)?.map(Number) || [];
+    return { command: bestCommand, params: { batteryId: ids.length === 1 ? ids[0] : ids } };
   }
 
-  /** Execute command */
+  /** Execute mapped command */
   async executeCommand(result: CommandMatch) {
     if (!result.command) return console.warn('No command matched');
 
     switch (result.command) {
       case 'charge_battery':
-        console.log('Charging battery', result.params['batteryId'], result.params['serieText'] || '');
+        console.log('Charging battery', result.params['batteryId']);
         break;
       case 'discharge_battery':
         console.log('Discharging battery', result.params['batteryId']);

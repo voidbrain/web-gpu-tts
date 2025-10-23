@@ -48,7 +48,7 @@
 
   <div class="ion-padding">
     <input [(ngModel)]="inputText" placeholder="Type a command" />
-    <button (click)="handleText(inputText)">Run</button>
-    <pre>{{ result }}</pre>
+    <button (click)="embedText()">Run</button>
+    <pre>{{ command | json }}</pre>
   </div>
 </div>
