@@ -76,10 +76,7 @@ export class TranscriberService {
   }
 
   async transcribe(audio: any): Promise<TranscriberData | null> {
-    await this.initializePipelineFactory();
-
     await this.createTranscriber();
-
     this.createStreamer();
 
     try {
@@ -106,6 +103,10 @@ export class TranscriberService {
     }
   }
 
+  public async load(): Promise<void> {
+    await this.initializePipelineFactory(); // ensures PipelineFactory is ready
+  }
+
   private async initializePipelineFactory(): Promise<void> {
     const p = PipelineFactory;
     if (p.model !== this.transcriberConfigStorage.model) {
@@ -116,6 +117,11 @@ export class TranscriberService {
         (await p.getInstance()).dispose();
         p.instance = null;
       }
+    }
+
+    // Preload the pipeline instance to speed up first transcription
+    if (p.instance === null) {
+      await p.getInstance(); // create and cache instance
     }
   }
 

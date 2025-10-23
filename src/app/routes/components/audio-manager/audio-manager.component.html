@@ -2,6 +2,12 @@
   @if (IS_WEBGPU_AVAILABLE) {
     <div [ngClass]="{ 'mt-5 w-50': !deviceDetectorService.isMobile() }">
       <div id="audio-manager" class="card m-2 p-2">
+        <app-model-card
+          [audioBlob]="audioBlob!"
+          (isTranscriptionInProgress)="setTranscriptionInProgress($event)"
+          (transcriptionComplete)="onTranscriptionComplete($event)">
+        </app-model-card>
+
         <div class="d-flex align-items-center mb-2">
           <button
             type="button"
@@ -35,7 +41,6 @@
       </div>
       @if (isTranscribeEnabled && audioBlob) {
         <div class="p-2">
-          audioblob
           <app-transcriber
             [audioBlob]="audioBlob"
             (isTranscriptionInProgress)="setTranscriptionInProgress($event)"

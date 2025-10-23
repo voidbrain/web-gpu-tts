@@ -9,6 +9,7 @@ import { LanguageComponent } from '@shared/components/language/language.componen
 import { AudioRecorderComponent } from '@routes/components/audio-recorder/audio-recorder.component';
 import { AudioPlayerComponent } from '@routes/components/audio-player/audio-player.component';
 import { TranscriberComponent } from '@routes/components/transcriber/transcriber.component';
+import { ModelCardComponent } from '@routes/components/model-card/model-card.component';
 import { LoggerService } from '@service/logger.service';
 import { EmbedderService } from '@service/command-parser/command-parser.service';
 // import { CommandService } from '@service/command-parser/command-parser.service';
@@ -25,6 +26,7 @@ import { EmbedderService } from '@service/command-parser/command-parser.service'
     AudioRecorderComponent,
     AudioPlayerComponent,
     TranscriberComponent,
+    ModelCardComponent,
     TranslatePipe,
   ],
   providers: [BsModalService],

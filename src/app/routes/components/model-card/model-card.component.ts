@@ -7,13 +7,13 @@ import { NgClass, DecimalPipe } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
-  selector: 'app-transcriber',
-  templateUrl: './transcriber.component.html',
+  selector: 'app-model-card',
+  templateUrl: './model-card.component.html',
   standalone: true,
   imports: [NgClass, DecimalPipe, TranslatePipe],
   providers: [TranscriberService],
 })
-export class TranscriberComponent implements OnInit {
+export class ModelCardComponent implements OnInit {
   @Output() transcriptionComplete = new EventEmitter<string>();
   protected audioProgress: number | undefined = 0;
   audioBlob = input.required<Blob>();

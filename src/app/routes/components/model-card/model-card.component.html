@@ -1,0 +1,37 @@
+@if (transcriberService.isModelLoading) {
+  <div class="card p-2">
+    <div class="d-flex align-items-center">
+      <div class="spinner-border spinner-border-sm text-primary mx-2"></div>
+      <span>{{ 'LOADING_MODELS_INFO' | translate }}</span>
+    </div>
+    @if (transcriberService.progressItems) {
+      <div>
+        @for (item of transcriberService.progressItems; track item.file; let last = $last) {
+          <div class="d-flex flex-column py-2 ms-2" [ngClass]="{ 'border-bottom border-1 border-dark': !last }">
+            <div>
+              <strong>{{ 'STATUS_TITLE' | translate }}</strong> {{ item.status }}
+            </div>
+            <div>
+              <strong>{{ 'NAME_TITLE' | translate }}</strong> {{ item.name }}
+            </div>
+            <div>
+              <strong>{{ 'FILE_TITLE' | translate }}</strong> {{ item.file }}
+            </div>
+            <div>
+              <strong>{{ 'PROGRESS_TITLE' | translate }}</strong>
+              <div class="progress">
+                <div
+                  class="progress-bar progress-bar-striped progress-bar-animated"
+                  role="progressbar"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  [attr.aria-valuenow]="item.progress | number"
+                  [style.width.%]="item.progress | number"></div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
