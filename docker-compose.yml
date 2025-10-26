@@ -1,0 +1,9 @@
+services:
+  web-gpu-app:
+    image: one-more-battery:latest
+    container_name: web-gpu-app
+    build: .
+    ports:
+      - "4201:80"
+    volumes:
+      - .:/app

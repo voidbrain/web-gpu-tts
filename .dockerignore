@@ -1,0 +1,17 @@
+# dependencies
+/node_modules
+
+# build outputs
+/dist
+/tmp
+/out-tsc
+
+# editor directories and files
+.angular/cache
+.vscode
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.idea
+.DS_Store
