@@ -21,6 +21,7 @@ env.backends.onnx!.wasm!.wasmPaths = {
 };
 
 @Injectable({ providedIn: 'root' })
+
 export class EmbedderService {
   private embedder: any | null = null;
   private loadingPromise: Promise<void> | null = null;
